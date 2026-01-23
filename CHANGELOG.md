@@ -6,7 +6,7 @@
 ### Features
 
 - Migrate CI/CD pipeline from GitLab CI to GitHub Actions
-  ([`xxxxxxx`](https://github.com/redhat-cop/openshift-virtualization-migration-ee/commit/xxxxxxx))
+  ([`dd3e131`](https://github.com/redhat-cop/openshift-virtualization-migration-ee/commit/dd3e131))
 
   * Replaced .gitlab-ci.yml with .github/workflows/build-ee.yml
   * Implemented multi-arch build strategy using buildah-build action
