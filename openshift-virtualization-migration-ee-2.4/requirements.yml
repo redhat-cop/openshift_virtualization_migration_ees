@@ -1,0 +1,11 @@
+---
+collections:
+  # Ansible for OpenShift Virtualization Migration
+  - name: infra.openshift_virtualization_migration
+  # Ansible for OpenShift Virtualization Day 2 Operations
+  - name: infra.openshift_virtualization_ops
+  # AAP 2.4 Dependencies
+  - name: ansible.controller
+    version: "<=4.5.12"
+  - name: infra.controller_configuration
+...

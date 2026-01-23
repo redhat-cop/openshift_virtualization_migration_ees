@@ -1,0 +1,4 @@
+# System dependencies for building EEs
+gcc [platform:rpm]
+systemd-devel [platform:rpm]
+python3.11-devel [platform:rpm]

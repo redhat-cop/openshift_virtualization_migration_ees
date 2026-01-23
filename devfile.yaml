@@ -1,0 +1,61 @@
+---
+# cspell: disable=devspaces
+schemaVersion: 2.2.2
+metadata:
+  name: openshift-virtualization-migration-ees
+components:
+  - name: tooling-container
+    container:
+      image: ghcr.io/ansible/ansible-devspaces:v25.2.1
+      memoryRequest: 256M
+      memoryLimit: 6Gi
+      cpuRequest: 250m
+      cpuLimit: 2000m
+      args: ["tail", "-f", "/dev/null"]
+      env:
+        - name: "ANSIBLE_COLLECTIONS_PATH"
+          value: "~/.ansible/collections:/usr/share/ansible/collections"
+        - name: KUBEDOCK_ENABLED
+          value: "true"
+        - name: PS1
+          value: PS1='[\u@\h \W$(__git_ps1 " (%s)")]\$ '
+commands:
+  - id: git-prompt
+    exec:
+      commandLine: 'source /usr/share/doc/git/contrib/completion/git-prompt.sh'
+      workingDir: ${PROJECT_SOURCE}
+      group:
+        kind: build
+        isDefault: true
+      component: tooling-container
+  - id: git-completion
+    exec:
+      commandLine: 'source /usr/share/doc/git/contrib/completion/git-completion.bash'
+      workingDir: ${PROJECT_SOURCE}
+      group:
+        kind: build
+        isDefault: true
+      component: tooling-container
+  - id: git-prompt-env
+    exec:
+      commandLine: 'echo "source /usr/share/doc/git/contrib/completion/git-prompt.sh">> ~/.bashrc'
+      workingDir: ${PROJECT_SOURCE}
+      group:
+        kind: build
+        isDefault: true
+      component: tooling-container
+  - id: git-completion-env
+    exec:
+      commandLine: 'echo "source /usr/share/doc/git/contrib/completion/git-completion.bash">> ~/.bashrc'
+      workingDir: ${PROJECT_SOURCE}
+      group:
+        kind: build
+        isDefault: true
+      component: tooling-container
+events:
+  postStart:
+    - "git-prompt"
+    - "git-prompt-env"
+    - "git-completion"
+    - "git-completion-env"
+...

@@ -1,0 +1,158 @@
+name: Build Execution Environments
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  REGISTRY: quay.io
+  REGISTRY_USER: ${{ secrets.QUAY_USER }}
+  REGISTRY_PASSWORD: ${{ secrets.QUAY_TOKEN }}
+  IMAGE_NAMESPACE: redhat-cop
+  IMAGE_NAME: openshift-virtualization-migration-ee
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        aap_version: ["2.4", "2.5"]
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Determine Tag Suffix
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "TAG_SUFFIX=" >> $GITHUB_ENV
+          else
+            echo "TAG_SUFFIX=-dev" >> $GITHUB_ENV
+          fi
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Install Ansible Builder
+        run: pip install ansible-builder
+
+      - name: Login to Destination Registry
+        uses: redhat-actions/podman-login@v1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ env.REGISTRY_USER }}
+          password: ${{ env.REGISTRY_PASSWORD }}
+
+      - name: Login to Red Hat Registry
+        uses: redhat-actions/podman-login@v1
+        with:
+          registry: registry.redhat.io
+          username: ${{ secrets.REDHAT_USERNAME }}
+          password: ${{ secrets.REDHAT_PASSWORD }}
+
+      - name: Run Ansible Builder
+        working-directory: openshift-virtualization-migration-ee-${{ matrix.aap_version }}
+        env:
+          ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_VALIDATED_TOKEN: ${{ secrets.AH_TOKEN_VALIDATED }}
+          ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_CERTIFIED_TOKEN: ${{ secrets.AH_TOKEN_CERTIFIED }}
+        run: |
+          source ../scripts/setup_build_env.sh
+          ansible-builder create --output-filename=Containerfile --verbosity 3
+      - name: Build Image (Multi-Arch)
+        uses: redhat-actions/buildah-build@v2
+        with:
+          image: ${{ env.IMAGE_NAME }}
+          tags: ${{ matrix.aap_version }}${{ env.TAG_SUFFIX }} latest-${{ matrix.aap_version }}${{ env.TAG_SUFFIX }}
+          # FIX: Removed 'registry' input here.
+          context: openshift-virtualization-migration-ee-${{ matrix.aap_version }}/context
+          containerfiles: |
+            openshift-virtualization-migration-ee-${{ matrix.aap_version }}/context/Containerfile
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            REDHAT_ORG=${{ secrets.REDHAT_ORG }}
+            REDHAT_ACTIVATION_KEY=${{ secrets.REDHAT_ACTIVATION_KEY }}
+            ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_VALIDATED_TOKEN=${{ secrets.AH_TOKEN_VALIDATED }}
+            ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_CERTIFIED_TOKEN=${{ secrets.AH_TOKEN_CERTIFIED }}
+            # FIX: Added the missing token below
+            ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_TOKEN=${{ secrets.AH_TOKEN_CERTIFIED }}
+            ANSIBLE_GALAXY_SERVER_LIST=automation_hub_certified,automation_hub_validated,upstream_galaxy
+            ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_CERTIFIED_URL=https://console.redhat.com/api/automation-hub/content/published/
+            ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_CERTIFIED_AUTH_URL=https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token
+            ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_VALIDATED_URL=https://console.redhat.com/api/automation-hub/content/validated/
+            ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_VALIDATED_AUTH_URL=https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token
+            ANSIBLE_GALAXY_SERVER_UPSTREAM_GALAXY_URL=https://galaxy.ansible.com
+      - name: Push to Registry
+        uses: redhat-actions/push-to-registry@v2
+        with:
+          image: ${{ env.IMAGE_NAME }}
+          tags: ${{ matrix.aap_version }}${{ env.TAG_SUFFIX }} latest-${{ matrix.aap_version }}${{ env.TAG_SUFFIX }}
+          registry: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}
+          username: ${{ env.REGISTRY_USER }}
+          password: ${{ env.REGISTRY_PASSWORD }}
+
+  # release:
+  #   if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     contents: write
+  #     issues: write
+  #     pull-requests: write
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0          
+  #     - name: Python Semantic Release
+  #       uses: python-semantic-release/python-semantic-release@v9.15.0
+  #       with:
+  #         github_token: ${{ secrets.GITHUB_TOKEN }}
+  release:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-release-${{ github.ref_name }}
+      cancel-in-progress: false
+
+    permissions:
+      contents: write
+
+    steps:
+      # Note: We checkout the repository at the branch that triggered the workflow.
+      # Python Semantic Release will automatically convert shallow clones to full clones
+      # if needed to ensure proper history evaluation. However, we forcefully reset the
+      # branch to the workflow sha because it is possible that the branch was updated
+      # while the workflow was running, which prevents accidentally releasing un-evaluated
+      # changes.
+      - name: Setup | Checkout Repository on Release Branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Setup | Force release branch to be at workflow sha
+        run: |
+          git reset --hard ${{ github.sha }}
+
+      - name: Action | Semantic Version Release
+        id: release
+        # Adjust tag with desired version if applicable.
+        uses: python-semantic-release/python-semantic-release@v10.5.3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          git_committer_name: "github-actions"
+          git_committer_email: "actions@users.noreply.github.com"
+
+      - name: Publish | Upload to GitHub Release Assets
+        uses: python-semantic-release/publish-action@v10.5.3
+        if: steps.release.outputs.released == 'true'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ steps.release.outputs.tag }}
+
+      # - name: Upload | Distribution Artifacts
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: distribution-artifacts
+      #     path: dist
+      #     if-no-files-found: error

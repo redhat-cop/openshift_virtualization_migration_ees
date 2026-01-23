@@ -1,0 +1,49 @@
+---
+version: 3
+images:
+  base_image:
+    name: registry.redhat.io/ansible-automation-platform-25/ee-minimal-rhel9:latest
+options:
+  package_manager_path: /usr/bin/microdnf
+dependencies:
+  system: bindep.txt
+  python_interpreter:
+    package_system: python3.11
+    python_path: /usr/bin/python3.11
+  ansible_core:
+    package_pip: ansible-core>=2.16
+  ansible_runner:
+    package_pip: ansible-runner
+  galaxy: requirements.yml
+  python: requirements.txt
+
+additional_build_steps:
+  prepend_base:
+    - ARG REDHAT_ORG
+    - ARG REDHAT_ACTIVATION_KEY
+    - RUN microdnf install -y subscription-manager
+    - RUN subscription-manager register --org $REDHAT_ORG --activationkey $REDHAT_ACTIVATION_KEY
+    # The fix for rpds-py is included here:
+    - RUN $PKGMGR -y remove python3.11-typing-extensions python3.11-referencing python3.11-jsonschema python3.11-rpds-py python3.11-ansible-compat python3.11-jsonschema-specifications ansible-lint || true
+    - RUN $PYCMD -m pip install --upgrade pip setuptools
+
+  prepend_builder:
+    - ENV PKGMGR_OPTS "--nodocs --setopt install_weak_deps=0 --enablerepo=rhocp-4.17-for-rhel-9-*-rpms"
+
+  prepend_galaxy:
+    - ARG ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_VALIDATED_URL
+    - ARG ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_VALIDATED_AUTH_URL
+    - ARG ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_VALIDATED_TOKEN
+    - ARG ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_TOKEN
+    - ARG ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_CERTIFIED_URL
+    - ARG ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_CERTIFIED_AUTH_URL
+    - ARG ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_CERTIFIED_TOKEN
+    - ARG ANSIBLE_GALAXY_SERVER_UPSTREAM_GALAXY_URL
+    - ARG ANSIBLE_GALAXY_SERVER_LIST
+
+  prepend_final:
+    - ENV PKGMGR_OPTS "--nodocs --setopt install_weak_deps=0 --enablerepo=rhocp-4.17-for-rhel-9-*-rpms"
+
+  append_final:
+    - RUN ln -sf /usr/bin/python3.11 /usr/bin/python3
+    - RUN subscription-manager unregister || true
