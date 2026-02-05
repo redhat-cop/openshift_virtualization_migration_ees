@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v1.8.1 (2026-02-05)
+
+### Bug Fixes
+
+- Remove references to GitLab and mf-buildah image
 
 ## v1.8.0 (2026-01-22)
 
