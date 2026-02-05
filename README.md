@@ -54,10 +54,6 @@ You will be presented with a list of variables that can be overridden. Modifying
 
 The execution environment should include all the dependencies necessary to execute the Ansible Collection for OpenShift Virtualization Migration collection. It is important that the requirements.yml matches so that all collections are available.
 
-Building this image depends on a customized buildah image (mf-buildah). The customizations are to allow it to run on a restrictive OpenShift environment and with an entrypoint that can be used by Gitlab Runners.
-
-Helper images are maintained in the https://gitlab.consulting.redhat.com/redhat-cop/vmware-openshift-virt-migration/migration_factory_runner_images repository.
-
 ## Notes on sharing image
 
 The migration-factory-ee is stored in a private registry as it contains Red Hat Automation content that is not available without a valid subscription.
@@ -74,4 +70,4 @@ The migration-factory-ee is stored in a private registry as it contains Red Hat 
 
 ## Contributing
 
-[See the contributors guide](CONTRIBUTING) for this repository and the [collection contributors repository](https://gitlab.consulting.redhat.com/redhat-cop/vmware-openshift-virt-migration/documentation)
+[See the contributors guide](CONTRIBUTING) for this repository and the [collection contributors repository](https://github.com/redhat-cop/openshift-virtualization-migration-documentation)
