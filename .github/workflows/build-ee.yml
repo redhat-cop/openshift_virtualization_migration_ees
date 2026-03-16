@@ -103,7 +103,7 @@ jobs:
   #   steps:
   #     - uses: actions/checkout@v4
   #       with:
-  #         fetch-depth: 0          
+  #         fetch-depth: 0
   #     - name: Python Semantic Release
   #       uses: python-semantic-release/python-semantic-release@v9.15.0
   #       with:
@@ -126,9 +126,9 @@ jobs:
       # while the workflow was running, which prevents accidentally releasing un-evaluated
       # changes.
       - name: Setup | Checkout Repository on Release Branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
-          ref: ${{ github.ref_name }}
+          fetch_depth: 0
 
       - name: Setup | Force release branch to be at workflow sha
         run: |
