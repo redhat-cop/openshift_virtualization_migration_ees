@@ -6,8 +6,12 @@ images:
 options:
   package_manager_path: /usr/bin/microdnf
 dependencies:
+  system: bindep.txt
+  python_interpreter:
+    package_system: python3.12
+    python_path: /usr/bin/python3.12
   ansible_core:
-    package_pip: ansible-core>=2.15.0rc2,<2.16
+    package_pip: ansible-core>=2.16
   ansible_runner:
     package_pip: ansible-runner
   galaxy: requirements.yml
@@ -17,16 +21,14 @@ additional_build_steps:
   prepend_base:
     - ARG REDHAT_ORG
     - ARG REDHAT_ACTIVATION_KEY
-    # FIX 1: Install subscription-manager AND python3-pip
-    - RUN microdnf install -y subscription-manager python3-pip
-    - RUN subscription-manager register --org $REDHAT_ORG --activationkey $REDHAT_ACTIVATION_KEY
-    - RUN $PKGMGR -y remove python3-typing-extensions python3-black python3-jsonschema ansible-lint || true
-    - RUN $PYCMD -m pip install -U pip setuptools
-  
-  # FIX 2: Restore repo enablement so packages can be found
+    - RUN if [[ ! -z "$REDHAT_ORG" ]] && [[ ! -z "$REDHAT_ACTIVATION_KEY" ]]; then microdnf install -y subscription-manager && subscription-manager register --org $REDHAT_ORG --activationkey $REDHAT_ACTIVATION_KEY; else echo "Skipping Subscribing Build"; fi
+    # The fix for rpds-py is included here:
+    - RUN $PKGMGR -y remove python3.12-typing-extensions python3.12-referencing python3.12-jsonschema python3.12-rpds-py python3.12-ansible-compat python3.12-jsonschema-specifications ansible-lint || true
+    - RUN $PYCMD -m pip install --upgrade pip setuptools
+
   prepend_builder:
-    - ENV PKGMGR_OPTS "--nodocs --setopt install_weak_deps=0 --enablerepo=rhocp-4.17-for-rhel-9-*-rpms"
-  
+    - ENV PKGMGR_OPTS "--nodocs --setopt install_weak_deps=0 --enablerepo=rhocp-4.21-for-rhel-9-*-rpms"
+
   prepend_galaxy:
     - ARG ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_VALIDATED_URL
     - ARG ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_VALIDATED_AUTH_URL
@@ -37,12 +39,10 @@ additional_build_steps:
     - ARG ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_CERTIFIED_TOKEN
     - ARG ANSIBLE_GALAXY_SERVER_UPSTREAM_GALAXY_URL
     - ARG ANSIBLE_GALAXY_SERVER_LIST
-  
-  # FIX 3: Restore repo enablement for the final stage
+
   prepend_final:
-    - ENV PKGMGR_OPTS "--nodocs --setopt install_weak_deps=0 --enablerepo=rhocp-4.17-for-rhel-9-*-rpms"
-  
-  append_base:
-    - RUN $PYCMD -m pip install -U pip
+    - ENV PKGMGR_OPTS "--nodocs --setopt install_weak_deps=0 --enablerepo=rhocp-4.21-for-rhel-9-*-rpms"
+
   append_final:
-    - RUN subscription-manager unregister
+    - RUN ln -sf /usr/bin/python3.12 /usr/bin/python3
+    - RUN if [[ ! -z "$REDHAT_ORG" ]] && [[ ! -z "$REDHAT_ACTIVATION_KEY" ]]; then subscription-manager unregister || true; else echo "Skipping Unregistering Build"; fi

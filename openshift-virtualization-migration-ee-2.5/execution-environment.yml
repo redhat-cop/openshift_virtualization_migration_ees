@@ -8,8 +8,8 @@ options:
 dependencies:
   system: bindep.txt
   python_interpreter:
-    package_system: python3.11
-    python_path: /usr/bin/python3.11
+    package_system: python3.12
+    python_path: /usr/bin/python3.12
   ansible_core:
     package_pip: ansible-core>=2.16
   ansible_runner:
@@ -21,14 +21,13 @@ additional_build_steps:
   prepend_base:
     - ARG REDHAT_ORG
     - ARG REDHAT_ACTIVATION_KEY
-    - RUN microdnf install -y subscription-manager
-    - RUN subscription-manager register --org $REDHAT_ORG --activationkey $REDHAT_ACTIVATION_KEY
+    - RUN if [[ ! -z "$REDHAT_ORG" ]] && [[ ! -z "$REDHAT_ACTIVATION_KEY" ]]; then microdnf install -y subscription-manager && subscription-manager register --org $REDHAT_ORG --activationkey $REDHAT_ACTIVATION_KEY; else echo "Skipping Subscribing Build"; fi
     # The fix for rpds-py is included here:
-    - RUN $PKGMGR -y remove python3.11-typing-extensions python3.11-referencing python3.11-jsonschema python3.11-rpds-py python3.11-ansible-compat python3.11-jsonschema-specifications ansible-lint || true
+    - RUN $PKGMGR -y remove python3.12-typing-extensions python3.12-referencing python3.12-jsonschema python3.12-rpds-py python3.12-ansible-compat python3.12-jsonschema-specifications ansible-lint || true
     - RUN $PYCMD -m pip install --upgrade pip setuptools
 
   prepend_builder:
-    - ENV PKGMGR_OPTS "--nodocs --setopt install_weak_deps=0 --enablerepo=rhocp-4.17-for-rhel-9-*-rpms"
+    - ENV PKGMGR_OPTS "--nodocs --setopt install_weak_deps=0 --enablerepo=rhocp-4.21-for-rhel-9-*-rpms"
 
   prepend_galaxy:
     - ARG ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_VALIDATED_URL
@@ -42,8 +41,8 @@ additional_build_steps:
     - ARG ANSIBLE_GALAXY_SERVER_LIST
 
   prepend_final:
-    - ENV PKGMGR_OPTS "--nodocs --setopt install_weak_deps=0 --enablerepo=rhocp-4.17-for-rhel-9-*-rpms"
+    - ENV PKGMGR_OPTS "--nodocs --setopt install_weak_deps=0 --enablerepo=rhocp-4.21-for-rhel-9-*-rpms"
 
   append_final:
-    - RUN ln -sf /usr/bin/python3.11 /usr/bin/python3
-    - RUN subscription-manager unregister || true
+    - RUN ln -sf /usr/bin/python3.12 /usr/bin/python3
+    - RUN if [[ ! -z "$REDHAT_ORG" ]] && [[ ! -z "$REDHAT_ACTIVATION_KEY" ]]; then subscription-manager unregister || true; else echo "Skipping Unregistering Build"; fi
