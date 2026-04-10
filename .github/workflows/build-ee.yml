@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        aap_version: ["2.4", "2.5"]
+        aap_version: ["2.4", "2.5", "2.6"]
 
     steps:
       - name: Checkout Code
@@ -93,21 +93,6 @@ jobs:
           username: ${{ env.REGISTRY_USER }}
           password: ${{ env.REGISTRY_PASSWORD }}
 
-  # release:
-  #   if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-  #   runs-on: ubuntu-latest
-  #   permissions:
-  #     contents: write
-  #     issues: write
-  #     pull-requests: write
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #       with:
-  #         fetch-depth: 0
-  #     - name: Python Semantic Release
-  #       uses: python-semantic-release/python-semantic-release@v9.15.0
-  #       with:
-  #         github_token: ${{ secrets.GITHUB_TOKEN }}
   release:
     needs: build-and-push
     if: github.ref == 'refs/heads/main'
