@@ -1,0 +1,22 @@
+# =====================================================================
+# migration_factory_ees - CODEOWNERS
+# =====================================================================
+
+# 1. Default fallback: Any PR requires review from the 'mergers' team 
+# to ensure code quality before it hits the main branch.
+* @redhat-cop/openshift-virtualization-migration-mergers
+
+# 2. CI/CD and Release Config: Only 'admins' should approve changes to 
+# GitHub Actions, semantic release config, and branch protections.
+/.github/workflows/ @redhat-cop/openshift-virtualization-migration-admins
+/pyproject.toml     @redhat-cop/openshift-virtualization-migration-admins
+
+# 3. Execution Environment specific folders: The general team can review 
+# changes to the container definitions and Ansible Builder contexts.
+/openshift-virtualization-migration-ee-2.4/ @redhat-cop/openshift-virtualization-migration
+/openshift-virtualization-migration-ee-2.5/ @redhat-cop/openshift-virtualization-migration
+/openshift-virtualization-migration-ee-2.6/ @redhat-cop/openshift-virtualization-migration
+/scripts/                                   @redhat-cop/openshift-virtualization-migration
+
+# 4. Documentation: Allow general team review README and CONTRIBUTING updates.
+/*.md @redhat-cop/openshift-virtualization-migration
