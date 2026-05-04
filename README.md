@@ -12,7 +12,7 @@ The following Execution Environments are available:
 
 This image is available from quay.io
 
-[redhat-cop/openshift-virtualization-migration-ee](quay.io/redhat-cop/openshift-virtualization-migration-ee)
+[redhat-cop/openshift-virtualization-migration-ee](https://quay.io/redhat-cop/openshift-virtualization-migration-ee)
 
 ### Development Image
 
