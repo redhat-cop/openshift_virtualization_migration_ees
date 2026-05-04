@@ -21,9 +21,13 @@ additional_build_steps:
   prepend_base:
     - ARG REDHAT_ORG
     - ARG REDHAT_ACTIVATION_KEY
+    # Remove packages that conflict with subscription-manager installation and pip
+    # dependency management. The AAP 2.5 base image ships python3.12-pyOpenSSL-26.0.0
+    # (which requires typing-extensions >= 4.9) and python3.12-cryptography installed
+    # via RPM. Both must be removed BEFORE subscription-manager is installed to avoid
+    # dependency resolution failures, and before pip runs to avoid missing RECORD errors.
+    - RUN $PKGMGR -y remove python3.12-pyOpenSSL python3.12-cryptography python3.12-typing-extensions python3.12-referencing python3.12-jsonschema python3.12-rpds-py python3.12-ansible-compat python3.12-jsonschema-specifications ansible-lint || true
     - RUN if [[ ! -z "$REDHAT_ORG" ]] && [[ ! -z "$REDHAT_ACTIVATION_KEY" ]]; then microdnf install -y subscription-manager && subscription-manager register --org $REDHAT_ORG --activationkey $REDHAT_ACTIVATION_KEY; else echo "Skipping Subscribing Build"; fi
-    # The fix for rpds-py is included here:
-    - RUN $PKGMGR -y remove python3.12-typing-extensions python3.12-referencing python3.12-jsonschema python3.12-rpds-py python3.12-ansible-compat python3.12-jsonschema-specifications ansible-lint || true
     - RUN $PYCMD -m pip install --upgrade pip setuptools
 
   prepend_builder:
