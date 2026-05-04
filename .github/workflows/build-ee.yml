@@ -72,6 +72,7 @@ jobs:
             openshift-virtualization-migration-ee-${{ matrix.aap_version }}/context/Containerfile
           platforms: linux/amd64,linux/arm64
           build-args: |
+            OCP_VERSION=4.21
             REDHAT_ORG=${{ secrets.REDHAT_ORG }}
             REDHAT_ACTIVATION_KEY=${{ secrets.REDHAT_ACTIVATION_KEY }}
             ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_VALIDATED_TOKEN=${{ secrets.AH_TOKEN_VALIDATED }}

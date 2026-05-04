@@ -27,7 +27,8 @@ additional_build_steps:
     - RUN $PYCMD -m pip install --upgrade pip setuptools
 
   prepend_builder:
-    - ENV PKGMGR_OPTS "--nodocs --setopt install_weak_deps=0 --enablerepo=rhocp-4.21-for-rhel-9-*-rpms"
+    - ARG OCP_VERSION=4.21
+    - ENV PKGMGR_OPTS "--nodocs --setopt install_weak_deps=0 --enablerepo=rhocp-${OCP_VERSION}-for-rhel-9-*-rpms"
 
   prepend_galaxy:
     - ARG ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_VALIDATED_URL
@@ -41,7 +42,8 @@ additional_build_steps:
     - ARG ANSIBLE_GALAXY_SERVER_LIST
 
   prepend_final:
-    - ENV PKGMGR_OPTS "--nodocs --setopt install_weak_deps=0 --enablerepo=rhocp-4.21-for-rhel-9-*-rpms"
+    - ARG OCP_VERSION=4.21
+    - ENV PKGMGR_OPTS "--nodocs --setopt install_weak_deps=0 --enablerepo=rhocp-${OCP_VERSION}-for-rhel-9-*-rpms"
 
   append_final:
     - RUN ln -sf /usr/bin/python3.12 /usr/bin/python3
