@@ -16,6 +16,7 @@
 /openshift-virtualization-migration-ee-2.4/ @redhat-cop/openshift-virtualization-migration
 /openshift-virtualization-migration-ee-2.5/ @redhat-cop/openshift-virtualization-migration
 /openshift-virtualization-migration-ee-2.6/ @redhat-cop/openshift-virtualization-migration
+/openshift-virtualization-migration-ee-2.7/ @redhat-cop/openshift-virtualization-migration
 /scripts/                                   @redhat-cop/openshift-virtualization-migration
 
 # 4. Documentation: Allow general team review README and CONTRIBUTING updates.

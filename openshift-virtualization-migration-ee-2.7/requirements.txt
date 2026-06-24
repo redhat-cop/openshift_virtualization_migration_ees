@@ -1,0 +1,6 @@
+omsdk >= 1.2.490
+kubernetes >= 12.0.0
+PyYAML >= 3.11
+aiohttp
+jmespath
+jsonpatch
