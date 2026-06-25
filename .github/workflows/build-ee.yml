@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        aap_version: ["2.4", "2.5", "2.6"]
+        aap_version: ["2.4", "2.5", "2.6", "2.7"]
 
     steps:
       - name: Checkout Code
