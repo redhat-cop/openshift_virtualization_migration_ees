@@ -1,0 +1,8 @@
+FROM quay.io/redhat-cop/openshift-virtualization-migration-ee:2.7
+
+USER 0
+
+RUN rm -rf /usr/share/ansible/collections/ansible_collections/infra/openshift_virtualization_migration && \
+    ln -s /runner/project /usr/share/ansible/collections/ansible_collections/infra/openshift_virtualization_migration
+
+USER 1000
