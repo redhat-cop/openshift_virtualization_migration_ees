@@ -44,6 +44,9 @@ on:
         required: true
         description: 'The token for the Automation Hub Certified repository'
 
+permissions:
+  contents: read
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
