@@ -1,0 +1,123 @@
+name: Build and Push Execution Environment
+
+on:
+  workflow_call:
+    inputs:
+      aap_version:
+        required: true
+        type: string
+      container_registry:
+        required: false
+        type: string
+        default: quay.io
+      image_namespace:
+        required: false
+        type: string
+        default: redhat-cop
+      image_name:
+        required: false
+        type: string
+        default: openshift-virtualization-migration-ee
+    secrets:
+      container_registry_username:
+        required: true
+        description: 'The username for the destination registry'
+      container_registry_password:
+        required: true
+        description: 'The password for the destination registry'
+      redhat_org:
+        required: true
+        description: 'The Red Hat organization for the Red Hat registry'
+      redhat_activation_key:
+        required: true
+        description: 'The Red Hat activation key for the Red Hat registry'
+      redhat_username:
+        required: true
+        description: 'The username for the Red Hat registry'
+      redhat_password:
+        required: true
+        description: 'The password for the Red Hat registry'
+      ah_token_validated:
+        required: true
+        description: 'The token for the Automation Hub Validated repository'
+      ah_token_certified:
+        required: true
+        description: 'The token for the Automation Hub Certified repository'
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Determine Tag Suffix
+        env:
+          GIT_REF: ${{ github.ref }}
+        run: |
+          if [[ "$GIT_REF" == "refs/heads/main" ]]; then
+            echo "TAG_SUFFIX=" >> $GITHUB_ENV
+          else
+            echo "TAG_SUFFIX=-dev" >> $GITHUB_ENV
+          fi
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Install Ansible Builder
+        run: pip install ansible-builder
+
+      - name: Login to Destination Registry
+        uses: redhat-actions/podman-login@v2
+        with:
+          registry: ${{ inputs.container_registry }}
+          username: ${{ secrets.container_registry_username }}
+          password: ${{ secrets.container_registry_password }}
+
+      - name: Login to Red Hat Registry
+        uses: redhat-actions/podman-login@v2
+        with:
+          registry: registry.redhat.io
+          username: ${{ secrets.redhat_username }}
+          password: ${{ secrets.redhat_password }}
+
+      - name: Run Ansible Builder
+        working-directory: openshift-virtualization-migration-ee-${{ inputs.aap_version }}
+        env:
+          ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_VALIDATED_TOKEN: ${{ secrets.ah_token_validated }}
+          ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_CERTIFIED_TOKEN: ${{ secrets.ah_token_certified }}
+        run: |
+          source ../scripts/setup_build_env.sh
+          ansible-builder create --output-filename=Containerfile --verbosity 3
+      - name: Build Image (Multi-Arch)
+        uses: redhat-actions/buildah-build@v3
+        with:
+          image: ${{ inputs.image_name }}
+          tags: ${{ inputs.aap_version }}${{ env.TAG_SUFFIX }} latest-${{ inputs.aap_version }}${{ env.TAG_SUFFIX }}
+          context: openshift-virtualization-migration-ee-${{ inputs.aap_version }}/context
+          containerfiles: |
+            openshift-virtualization-migration-ee-${{ inputs.aap_version }}/context/Containerfile
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            REDHAT_ORG=${{ secrets.redhat_org }}
+            REDHAT_ACTIVATION_KEY=${{ secrets.redhat_activation_key }}
+            ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_VALIDATED_TOKEN=${{ secrets.ah_token_validated }}
+            ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_CERTIFIED_TOKEN=${{ secrets.ah_token_certified }}
+            ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_TOKEN=${{ secrets.ah_token_certified }}
+            ANSIBLE_GALAXY_SERVER_LIST=automation_hub_certified,automation_hub_validated,upstream_galaxy
+            ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_CERTIFIED_URL=https://console.redhat.com/api/automation-hub/content/published/
+            ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_CERTIFIED_AUTH_URL=https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token
+            ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_VALIDATED_URL=https://console.redhat.com/api/automation-hub/content/validated/
+            ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_VALIDATED_AUTH_URL=https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token
+            ANSIBLE_GALAXY_SERVER_UPSTREAM_GALAXY_URL=https://galaxy.ansible.com
+      - name: Push to Registry
+        uses: redhat-actions/push-to-registry@v2
+        with:
+          image: ${{ inputs.image_name }}
+          tags: ${{ inputs.aap_version }}${{ env.TAG_SUFFIX }} latest-${{ inputs.aap_version }}${{ env.TAG_SUFFIX }}
+          registry: ${{ inputs.container_registry }}/${{ inputs.image_namespace }}
+          username: ${{ secrets.container_registry_username }}
+          password: ${{ secrets.container_registry_password }}
