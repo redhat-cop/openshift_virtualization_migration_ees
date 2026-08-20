@@ -28,6 +28,23 @@ jobs:
       ah_token_validated: ${{ secrets.AH_TOKEN_VALIDATED }}
       ah_token_certified: ${{ secrets.AH_TOKEN_CERTIFIED }}
 
+  build-and-push-ee-devel:
+    needs: build-and-push-ee
+    permissions:
+      contents: read
+    uses: ./.github/workflows/_build-push-ee.yml
+    with:
+      aap_version: devel
+    secrets:
+      container_registry_username: ${{ secrets.QUAY_USER }}
+      container_registry_password: ${{ secrets.QUAY_TOKEN }}
+      redhat_org: ${{ secrets.REDHAT_ORG }}
+      redhat_activation_key: ${{ secrets.REDHAT_ACTIVATION_KEY }}
+      redhat_username: ${{ secrets.REDHAT_USERNAME }}
+      redhat_password: ${{ secrets.REDHAT_PASSWORD }}
+      ah_token_validated: ${{ secrets.AH_TOKEN_VALIDATED }}
+      ah_token_certified: ${{ secrets.AH_TOKEN_CERTIFIED }}
+
   release:
     needs: build-and-push-ee
     if: github.ref == 'refs/heads/main'
