@@ -1,0 +1,6 @@
+# Optional: set exit code to 1 if CRITICAL findings exist
+exit-code: 1
+severity:
+  - CRITICAL
+secret:
+  config: trivy-secret.yaml
