@@ -19,30 +19,48 @@ dependencies:
 
 additional_build_steps:
   prepend_base:
-    - ARG REDHAT_ORG
-    - ARG REDHAT_ACTIVATION_KEY
-    - RUN if [[ ! -z "$REDHAT_ORG" ]] && [[ ! -z "$REDHAT_ACTIVATION_KEY" ]]; then microdnf install -y subscription-manager && subscription-manager register --org $REDHAT_ORG --activationkey $REDHAT_ACTIVATION_KEY; else echo "Skipping Subscribing Build"; fi
-    # The fix for rpds-py is included here:
+    # The 2.5 base image ships python3.12-urllib3/pyyaml/certifi/typing-extensions as RPMs with
+    # no pip RECORD files. pip's resolver requires newer versions of these packages (driven by
+    # kubernetes>=37.x and other collection deps), and would fail with uninstall-no-record-file
+    # when trying to upgrade them. Fix: force-remove them with rpm --nodeps (bypasses the RPM
+    # dependency graph), then pip-install the newer versions to /usr/local so all downstream
+    # stages inherit them. pip finds them satisfied in /usr/local first and never touches the
+    # RPM versions re-installed by subscription-manager (python3-urllib3, not python3.12).
+    # Note: 2.6 and 2.7 base images already ship versions that satisfy pip's constraints.
     - RUN $PKGMGR -y remove python3.12-typing-extensions python3.12-referencing python3.12-jsonschema python3.12-rpds-py python3.12-ansible-compat python3.12-jsonschema-specifications ansible-lint || true
+    - RUN rpm -e --nodeps python3.12-urllib3 python3.12-certifi python3.12-pyyaml python3.12-typing-extensions 2>/dev/null || true
     - RUN $PYCMD -m pip install --upgrade pip setuptools
-
-  prepend_builder:
-    - ENV PKGMGR_OPTS "--nodocs --setopt install_weak_deps=0 --enablerepo=rhocp-4.21-for-rhel-9-*-rpms"
+    - RUN $PYCMD -m pip install --no-cache-dir urllib3 typing-extensions PyYAML certifi
+    # pip installs all compiled packages (PyYAML, aiohttp, pydantic_core, multidict, yarl, gssapi,
+    # kerberos, bcrypt, etc.) to /usr/local/lib64 (platlib). RHEL 9's Python only includes
+    # /usr/local/lib in sys.path, not lib64 — so none of them would be importable at EE runtime.
+    # PYTHONPATH is inherited by all stages (galaxy, builder, final) via FROM base.
+    - ENV PYTHONPATH=/usr/local/lib64/python3.12/site-packages
 
   prepend_galaxy:
     - ARG ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_VALIDATED_URL
     - ARG ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_VALIDATED_AUTH_URL
     - ARG ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_VALIDATED_TOKEN
-    - ARG ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_TOKEN
     - ARG ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_CERTIFIED_URL
     - ARG ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_CERTIFIED_AUTH_URL
     - ARG ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_CERTIFIED_TOKEN
     - ARG ANSIBLE_GALAXY_SERVER_UPSTREAM_GALAXY_URL
     - ARG ANSIBLE_GALAXY_SERVER_LIST
 
-  prepend_final:
+  prepend_builder:
+    - ARG REDHAT_ORG
+    - ARG REDHAT_ACTIVATION_KEY
+    - RUN if [[ ! -z "$REDHAT_ORG" ]] && [[ ! -z "$REDHAT_ACTIVATION_KEY" ]]; then microdnf install -y subscription-manager && subscription-manager register --org $REDHAT_ORG --activationkey $REDHAT_ACTIVATION_KEY; else echo "Skipping Subscribing Build"; fi
+    # subscription-manager installs python3 (3.9) urllib3/requests as RPMs, NOT python3.12
+    # versions. The pip-managed urllib3, certifi, PyYAML, typing-extensions already in /usr/local
+    # (from prepend_base) take precedence in sys.path — pip sees them as satisfied and never
+    # attempts to upgrade or uninstall the RPM versions in /usr/lib/python3.12.
     - ENV PKGMGR_OPTS "--nodocs --setopt install_weak_deps=0 --enablerepo=rhocp-4.21-for-rhel-9-*-rpms"
+
+  append_builder:
+    - ARG REDHAT_ORG
+    - ARG REDHAT_ACTIVATION_KEY
+    - RUN if [[ ! -z "$REDHAT_ORG" ]] && [[ ! -z "$REDHAT_ACTIVATION_KEY" ]]; then subscription-manager unregister || true; else echo "Skipping Unregistering Build"; fi
 
   append_final:
     - RUN ln -sf /usr/bin/python3.12 /usr/bin/python3
-    - RUN if [[ ! -z "$REDHAT_ORG" ]] && [[ ! -z "$REDHAT_ACTIVATION_KEY" ]]; then subscription-manager unregister || true; else echo "Skipping Unregistering Build"; fi

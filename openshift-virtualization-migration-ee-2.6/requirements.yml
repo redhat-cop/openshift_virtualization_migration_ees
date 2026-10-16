@@ -4,7 +4,7 @@ collections:
   - name: infra.openshift_virtualization_migration
   # Ansible for OpenShift Virtualization Day 2 Operations
   - name: infra.openshift_virtualization_ops
-  # AAP 2.5 Dependencies
+  # AAP 2.6 Dependencies
   - name: ansible.controller
   - name: infra.aap_configuration
 ...
