@@ -5,10 +5,18 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  schedule:
+    - cron: '13 1 * * *'
   workflow_dispatch:
 
 jobs:
+  populate-trivy-cache:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/_populate-trivy-cache.yml
+
   build-and-push-ee:
+    needs: populate-trivy-cache
     permissions:
       contents: read
     strategy:
@@ -31,7 +39,7 @@ jobs:
   release:
     needs: build-and-push-ee
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     concurrency:
       group: ${{ github.workflow }}-release-${{ github.ref_name }}
       cancel-in-progress: false
