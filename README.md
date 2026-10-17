@@ -16,9 +16,9 @@ This image is available from quay.io
 
 ### Development Image
 
-This image is published to the RH internal quay on every update of the main branch. VPN is required to access.
+A image is available for use by developers building content for the collection. It includes content from the latest EE image with the openshift-virtualization-migration collection omitted to enable development workflows.
 
-[Development Image - migration-factory/openshift-virtualization-migration-ee](images.paas.redhat.com/migration-factory/openshift-virtualization-migration-ee:dev)
+[Development Image - quay.io/redhat-cop/openshift-virtualization-migration-ee:devel](openshift-virtualization-migration-ee-devel)
 
 
 #### Pulling the image
@@ -38,25 +38,13 @@ To obtain more information on the images, or view all the available tags you can
 $ skopeo list-tags docker://quay.io/redhat-cop/openshift-virtualization-migration-ee
 ```
 
-#### Publishing a new image
-
-This repository automatically builds and pushes a new image on every pipeline run to enable testing. Images built using the pipeline are published to the internal quay registry every run with two tags, 'dev' and 'dev-pipeline-build'.
-
-**NOTE The public image is not currently published via the pipeline. That is a manual step that must be done when we are ready for a new release.**
-
-In order to push an image with a different tag (such as a version number or latest) a manual pipeline execution is needed. This can be done through the UI by clicking on "Build" -> "Pipelines" in the left side navigation bar. From the Pipelines screen click "New Pipeline" in the top right.
-
-You will be presented with a list of variables that can be overridden. Modifying the value for "BUILDAH_OUTPUT_TAG" will override the default generated tag to what is needed.
-
-**NOTE** The pipeline already contains the necessary credentials to push to quay.io/redhat-cop/openshift-virtualization-migration-ee, and does not expose an easy way to provide additional credentials for other repositories. If pushing to additional destinations are needed, reach out on the #forum-virt-migration-factory slack channel for support.
-
 #### Technical Details
 
 The execution environment should include all the dependencies necessary to execute the Ansible Collection for OpenShift Virtualization Migration collection. It is important that the requirements.yml matches so that all collections are available.
 
 ## Notes on sharing image
 
-The migration-factory-ee is stored in a private registry as it contains Red Hat Automation content that is not available without a valid subscription.
+The openshift-virtualization-migration-ee image is stored in a private registry as it contains Red Hat Automation and supporting content that is not available without a valid subscription.
 
 >>>
 
