@@ -46,6 +46,7 @@ on:
 
 permissions:
   contents: read
+  security-events: write
 
 jobs:
   build-and-push:
