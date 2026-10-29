@@ -49,4 +49,4 @@ else
   exit 1
 fi
 
-echo "✅ Execution Environment created successfully!."
+echo "✅ Execution Environment created successfully!"
