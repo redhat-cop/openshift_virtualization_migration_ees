@@ -38,6 +38,12 @@ additional_build_steps:
     - ENV PYTHONPATH=/usr/local/lib64/python3.12/site-packages
 
   prepend_galaxy:
+    # Increase the per-server TLS/connect timeout from the default 60 s.
+    # Under QEMU arm64 emulation, SSL handshakes are significantly slower due
+    # to emulated crypto; the default timeout causes intermittent build failures.
+    - ENV ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_CERTIFIED_TIMEOUT=120
+    - ENV ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_VALIDATED_TIMEOUT=120
+    - ENV ANSIBLE_GALAXY_SERVER_UPSTREAM_GALAXY_TIMEOUT=120
     - ARG ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_VALIDATED_URL
     - ARG ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_VALIDATED_AUTH_URL
     - ARG ANSIBLE_GALAXY_SERVER_AUTOMATION_HUB_VALIDATED_TOKEN

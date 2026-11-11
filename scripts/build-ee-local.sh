@@ -42,11 +42,13 @@ podman build \
 echo "✅ Image has been built."
 
 echo "🚀 Scanning image for vulnerabilities..."
-if trivy image --config trivy.yaml "openshift-virtualization-migration-ee:${AAP_VERSION}"; then
-  echo "✅ Image has been scanned. No CRITICAL vulnerabilities found."
-else
-  echo "❌ CRITICAL vulnerabilities found!" >&2
+trivy image --config trivy.yaml --format json --output trivy-results.json "openshift-virtualization-migration-ee:${AAP_VERSION}"
+trivy convert --format table trivy-results.json
+COUNT=$(jq '[.Results[]? | (.Vulnerabilities // []) + (.Secrets // []) | .[]] | length' trivy-results.json)
+if [ "${COUNT}" -gt 0 ]; then
+  echo "❌ Trivy found ${COUNT} CRITICAL vulnerability/vulnerabilities in the image." >&2
   exit 1
 fi
+echo "✅ Image has been scanned. No CRITICAL vulnerabilities found."
 
 echo "✅ Execution Environment created successfully!"

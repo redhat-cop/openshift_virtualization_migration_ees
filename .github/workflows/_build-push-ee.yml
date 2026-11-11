@@ -141,18 +141,36 @@ jobs:
           scan-type: 'image'
           input: '/tmp/image-scan.tar'
           trivy-config: trivy.yaml
-          format: 'sarif'
-          output: 'trivy-results.sarif'
+          format: 'json'
+          output: 'trivy-results.json'
         env:
           TRIVY_SKIP_DB_UPDATE: true
           TRIVY_SKIP_JAVA_DB_UPDATE: true
           TRIVY_CACHE_DIR: ${{ github.workspace }}/.cache/trivy
 
+      - name: Show CRITICAL findings table
+        if: always() && hashFiles('trivy-results.json') != ''
+        run: trivy convert --format table trivy-results.json
+
+      - name: Generate SARIF report
+        if: always() && hashFiles('trivy-results.json') != ''
+        run: trivy convert --format sarif --output trivy-results.sarif trivy-results.json
+
       - name: Upload Trivy scan results to GitHub Security tab
-        if: always()
+        if: always() && hashFiles('trivy-results.sarif') != ''
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: 'trivy-results.sarif'
+
+      - name: Block push on CRITICAL vulnerabilities
+        if: hashFiles('trivy-results.json') != ''
+        run: |
+          COUNT=$(jq '[.Results[]? | (.Vulnerabilities // []) + (.Secrets // []) | .[]] | length' trivy-results.json)
+          if [ "$COUNT" -gt 0 ]; then
+            echo "::error::Trivy found ${COUNT} CRITICAL vulnerability/vulnerabilities in the image. The image push is blocked. See the Security tab for the full CVE list."
+            exit 1
+          fi
+          echo "Trivy scan complete — no CRITICAL vulnerabilities found."
 
       - name: Push to Registry
         uses: redhat-actions/push-to-registry@v3
